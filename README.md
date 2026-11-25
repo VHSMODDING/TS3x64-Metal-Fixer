@@ -18,6 +18,7 @@ A macOS tool for applying fixes to your own installation of **The Sims 3 64-bit 
 - **Fullscreen** makes the game window cover the display.
 - **Anisotropic filtering** (beta) sharpens ground textures viewed at an angle.
 - **Triple buffering** (beta) aims to make rendering smoother.
+- **Disappearing terrain paint** keeps lot terrain paint visible while painting. On Mac, after each brush stroke the engine uploads a lot paint weight map that contains only the current stroke, so earlier paint vanished and the world ground showed through until the save was reloaded. The fix keeps a copy of the lot's paint weights and merges each upload with it: painted points of the upload are used, empty points keep the existing paint. Limitation: erased or undone paint stays visible until the save is reloaded (the save itself is correct).
 - **Walls holed by snowy roads** stops walls from showing the road behind them in winter. On Metal, the game draws an invisible depth pre-pass for snow-covered ground and roads at the wrong depth, so walls behind which a snowy road passes are not drawn. The fix skips only that pre-pass in the on-screen image. Snow and shadows are still drawn normally.
 
 ### Mods (packages)

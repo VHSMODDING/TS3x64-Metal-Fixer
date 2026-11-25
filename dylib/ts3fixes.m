@@ -16,7 +16,7 @@ static int gFull=1, gRes=1, gAniso=1, gBuffer=1, gSS=0;  // supersampling off pa
 static double gSSFactor=1.5;
 extern void TS3MetalTraceEnable(void);
 static int gMetalTrace=0;
-extern int gDepthClamp,gLoadFix,gAudioDiag,gAudioFix,gAudioBuf,gClearFix,gAudioLP,gUpTrace,gMtlVal; extern void TS3UpTraceInit(void); extern int gBiasTrace,gBiasFix,gStencilFix; extern void TS3DepthBiasInit(void); extern int gDrawSkip,gSnowFix,gWinFix,gFrostGuard; extern void TS3DrawSkipInit(void); extern char gAudioPrio[64]; extern void TS3LabInit(void);
+extern int gDepthClamp,gLoadFix,gAudioDiag,gAudioFix,gAudioBuf,gClearFix,gAudioLP,gUpTrace,gMtlVal; extern void TS3UpTraceInit(void); extern int gBiasTrace,gBiasFix,gStencilFix; extern void TS3DepthBiasInit(void); extern int gDrawSkip,gSnowFix,gWinFix,gFrostGuard,gPaintFix; extern void TS3DrawSkipInit(void); extern char gAudioPrio[64]; extern void TS3LabInit(void);
 static FILE*gLog; static void LG(const char*fmt,...){ if(!gLog)gLog=fopen("/tmp/ts3_gfx.log","a"); if(gLog){va_list a;va_start(a,fmt);vfprintf(gLog,fmt,a);va_end(a);fputc('\n',gLog);fflush(gLog);} }
 static void readConf(void){
   const char*home=getenv("HOME"); if(!home) return;
@@ -32,7 +32,7 @@ static void readConf(void){
     if(strstr(line,"ss=0")) gSS=0; else if(strstr(line,"ss=1")) gSS=1;
     { int v; if(sscanf(line,"loadfix=%d",&v)==1) gLoadFix=v; if(sscanf(line,"audiodiag=%d",&v)==1) gAudioDiag=v;
       if(sscanf(line,"audiofix=%d",&v)==1) gAudioFix=v; if(sscanf(line,"audiobuf=%d",&v)==1) gAudioBuf=v;
-      if(sscanf(line,"clearfix=%d",&v)==1) gClearFix=v; if(sscanf(line,"audioprio=%63[^\n]",gAudioPrio)!=1 && strncmp(line,"audioprio=",10)==0) gAudioPrio[0]=0; extern char gBoost[128]; extern int gAudioRec, gAudioLP; if(sscanf(line,"audiolp=%d",&v)==1) gAudioLP=v; if(sscanf(line,"uptrace=%d",&v)==1) gUpTrace=v; if(sscanf(line,"mtlval=%d",&v)==1) gMtlVal=v; if(sscanf(line,"depthclamp=%d",&v)==1) gDepthClamp=v; if(sscanf(line,"biastrace=%d",&v)==1) gBiasTrace=v; if(sscanf(line,"biasfix=%d",&v)==1) gBiasFix=v; if(sscanf(line,"stencilfix=%d",&v)==1) gStencilFix=v; if(sscanf(line,"drawskip=%d",&v)==1) gDrawSkip=v; if(sscanf(line,"snowfix=%d",&v)==1) gSnowFix=v; if(sscanf(line,"winfix=%d",&v)==1) gWinFix=v; if(sscanf(line,"frostguard=%d",&v)==1) gFrostGuard=v; if(sscanf(line,"audiorec=%d",&v)==1) gAudioRec=v; if(sscanf(line,"boost=%127[^\n]",gBoost)!=1 && strncmp(line,"boost=",6)==0) gBoost[0]=0; }
+      if(sscanf(line,"clearfix=%d",&v)==1) gClearFix=v; if(sscanf(line,"audioprio=%63[^\n]",gAudioPrio)!=1 && strncmp(line,"audioprio=",10)==0) gAudioPrio[0]=0; extern char gBoost[128]; extern int gAudioRec, gAudioLP; if(sscanf(line,"audiolp=%d",&v)==1) gAudioLP=v; if(sscanf(line,"uptrace=%d",&v)==1) gUpTrace=v; if(sscanf(line,"mtlval=%d",&v)==1) gMtlVal=v; if(sscanf(line,"depthclamp=%d",&v)==1) gDepthClamp=v; if(sscanf(line,"biastrace=%d",&v)==1) gBiasTrace=v; if(sscanf(line,"biasfix=%d",&v)==1) gBiasFix=v; if(sscanf(line,"stencilfix=%d",&v)==1) gStencilFix=v; if(sscanf(line,"drawskip=%d",&v)==1) gDrawSkip=v; if(sscanf(line,"snowfix=%d",&v)==1) gSnowFix=v; if(sscanf(line,"winfix=%d",&v)==1) gWinFix=v; if(sscanf(line,"frostguard=%d",&v)==1) gFrostGuard=v; if(sscanf(line,"paintfix=%d",&v)==1) gPaintFix=v; if(sscanf(line,"audiorec=%d",&v)==1) gAudioRec=v; if(sscanf(line,"boost=%127[^\n]",gBoost)!=1 && strncmp(line,"boost=",6)==0) gBoost[0]=0; }
     if(strstr(line,"metaltrace=0")) gMetalTrace=0; else if(strstr(line,"metaltrace=1")) gMetalTrace=1;
   }
   fclose(f);
@@ -104,6 +104,6 @@ __attribute__((constructor)) static void init(void){
   if(gMetalTrace) TS3MetalTraceEnable();
   if(gUpTrace) TS3UpTraceInit();
   if(gBiasTrace||gBiasFix||gStencilFix) TS3DepthBiasInit();
-  if(gDrawSkip||gSnowFix||gWinFix||gFrostGuard) TS3DrawSkipInit();
+  if(gDrawSkip||gSnowFix||gWinFix||gFrostGuard||gPaintFix) TS3DrawSkipInit();
   if(gLoadFix||gAudioDiag||gAudioFix||gClearFix||gAudioLP||gDepthClamp) TS3LabInit();
 }
