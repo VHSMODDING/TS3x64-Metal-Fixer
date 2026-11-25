@@ -1,0 +1,27 @@
+{
+ "file": "Resources/GraphicsRules.sgr",
+ "base_sha1": "ce459837592d7a22bb417fdc2ee37864d53e3e91",
+ "result_sha1": "f4e9b417d56ed118d9602e3f0ed0e9e5e9a23c1e",
+ "pairs": [
+  [
+   "endif\nif ($forcedCpuLevel > 0)",
+   "endif\nseti forcedCpuLevel 5\nif ($forcedCpuLevel > 0)"
+  ],
+  [
+   "prop $ConfigGroup ShadowMapSize 2048",
+   "prop $ConfigGroup ShadowMapSize 4096"
+  ],
+  [
+   "\t\tprop $ConfigGroup TextureSizeThreshold  2048\n\t\tprop $ConfigGroup RttSizeSmall  256\n\t\tprop $ConfigGroup RttSizeLarge  512",
+   "\t\tprop $ConfigGroup TextureSizeThreshold  4096\n\t\tprop $ConfigGroup RttSizeSmall  512\n\t\tprop $ConfigGroup RttSizeLarge  1024"
+  ],
+  [
+   "prop $ConfigGroup RenderSimTextureSizes \"2048, 2048, 512, 128\"",
+   "prop $ConfigGroup RenderSimTextureSizes \"2048,2048,1024,512\""
+  ],
+  [
+   "\tprop $ConfigGroup ActiveLODLimit 200\n\tprop $ConfigGroup ShaderSkinCompositing true\nend",
+   "\tprop $ConfigGroup ActiveLODLimit 400\n\tprop $ConfigGroup ShaderSkinCompositing true\nend"
+  ]
+ ]
+}

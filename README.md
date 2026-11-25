@@ -12,23 +12,37 @@ A macOS tool for applying fixes to your own installation of **The Sims 3 64-bit 
 
 ## Included fixes
 
+### Display (native)
+
 - **Native macOS resolutions** adds display sizes such as 1512×982 and 1728×1117, including Apple Silicon screen sizes.
 - **Fullscreen** makes the game window cover the display.
 - **Anisotropic filtering** (beta) sharpens ground textures viewed at an angle.
 - **Triple buffering** (beta) aims to make rendering smoother.
-- **Walls holed by snowy roads** stops walls from showing the road behind them in winter. The game draws an invisible depth pre-pass for snow-covered ground and roads at a wrong depth on Metal; the fix skips only that pre-pass on screen. Snow and shadows are still drawn normally.
+- **Walls holed by snowy roads** stops walls from showing the road behind them in winter. On Metal, the game draws an invisible depth pre-pass for snow-covered ground and roads at the wrong depth, so walls behind which a snowy road passes are not drawn. The fix skips only that pre-pass in the on-screen image. Snow and shadows are still drawn normally.
+
+### Mods (packages)
+
 - **Ocean + insects clicking** restores interaction with the ocean and helps select insects, nanites and sea life. This is a package installed in the game's `Mods/Overrides` folder (migrated from `Packages` when applying). It replaces `UI.dll` and can conflict with other mods that do the same. If using Tiny UI Fix, install this fix first and then run or regenerate Tiny UI Fix. Remove older OceanPickFix or TS3MacInsectPick packages.
 - **Smooth Patch** installs the included Smooth Patch package for smoother gameplay. Credit: [LazyDuchess](https://modthesims.info/m/10124945).
 - **SF Font Bold** installs a macOS-style font override.
-- **Red pools fix** corrects the red/pink appearance of pool water.
-- **Flickering frosted windows** stops community building ("rabbit hole") windows from flickering in winter. The frosted-glass shaders are drawn opaque (frosted glass is already 95% opaque), which removes the order-dependent transparency blending that flickers on Metal.
-- **Pink flash fix** (beta) patches the affected shader. Shader fixes are applied only when the existing bytes match the expected game version.
 
-The app can create the standard Mods folders and `Resource.cfg` when necessary. Existing Resource.cfg rules are preserved; missing root Packages or Overrides rules are appended, with a backup. Overrides priority does not necessarily exceed other custom priorities. Its log reports what it detected and applied. Native fixes modify and ad-hoc sign your own game installation; the tool stores backups in `~/Library/Application Support/TS3MacFixes`.
+### Shaders
+
+- **Red pools fix** corrects the red/pink appearance of pool water.
+- **Pink flash fix** (beta) patches the affected shader.
+- **Flickering frosted windows** stops community building ("rabbit hole") windows from flickering in winter. The frosted-glass shaders are drawn opaque (frosted glass is already 95% opaque), which removes the order-dependent transparency blending that flickers on Metal. Frost and snow stay visible.
+
+Shader fixes are applied only when the existing bytes match the expected game version; otherwise the file is left untouched.
+
+### Graphics settings
+
+- **Recommended graphics settings for Apple Silicon** edits the game's `GraphicsRules.sgr`: CPU level set to the highest tier, shadow maps 4096 instead of 2048, texture size threshold 4096, larger intermediate render textures (512/1024), more detailed Sim textures (2048, 2048, 1024, 512) and a higher nearby object detail limit (400). For the Sim textures and object detail, set **Sim quality to Very High** in the game options. Each change is applied only if the file contains the expected original text, and the original file is backed up.
+
+The app can create the standard Mods folders and `Resource.cfg` when necessary. Existing Resource.cfg rules are preserved; missing root Packages or Overrides rules are appended, with a backup. Overrides priority does not necessarily exceed other custom priorities. Its log reports what it detected and applied. Native fixes modify and ad-hoc sign your own game installation; the tool stores backups (game binary, shaders, graphics settings) in `~/Library/Application Support/TS3MacFixes`.
 
 ## Build
 
-On macOS with the Command Line Tools installed, run `./scripts/build.sh`. The script builds a universal app, packages the supplied resources, signs it ad hoc and creates `dist/TS3 Mac Fixer.dmg`. The prebuilt `assets/libts3fix.dylib` is used by the build; the available native source is in `dylib/`. Signing is ad hoc and the app is not notarized by this build script.
+On macOS with the Command Line Tools installed, run `./scripts/build.sh`. The script builds a universal app, packages the supplied resources, signs it ad hoc and creates `dist/TS3 Mac Fixer.dmg`. The script also compiles the native library injected into the game (`assets/libts3fix.dylib`, x86_64 because the game runs under Rosetta) from the sources in `dylib/`. Signing is ad hoc and the app is not notarized by this build script.
 
 This project is not affiliated with Electronic Arts. The Sims is a trademark of Electronic Arts.
 

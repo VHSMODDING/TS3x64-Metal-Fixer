@@ -15,7 +15,7 @@ func md(_ s: String) -> AttributedString {
 
 // MARK: - Modèle
 
-enum FixKind { case native, package, override_, shader }
+enum FixKind { case native, package, override_, shader, config }
 
 struct Fix: Identifiable {
     let id: String
@@ -37,6 +37,7 @@ let FIXES: [Fix] = [
     Fix(id: "redpool", name: tr("Correction piscines rouges","Red pools fix"), detail: "", kind: .shader),
     Fix(id: "redflash", name: tr("Correction flash rose","Pink flash fix"), detail: "", kind: .shader, beta: true),
     Fix(id: "frostwindows", name: tr("Vitres givrées qui clignotent","Flickering frosted windows"), detail: tr("En hiver, les fenêtres des bâtiments communautaires ne clignotent plus.","In winter, community building windows no longer flicker."), kind: .shader),
+    Fix(id: "gfxrules", name: tr("Optimisation des paramètres graphiques conseillés pour Apple Silicon","Recommended graphics settings for Apple Silicon"), detail: tr("Ombres plus nettes, textures et Sims plus détaillés. Mets la qualité des Sims sur « Très élevée » dans les options du jeu.","Sharper shadows, more detailed textures and Sims. Set Sim quality to Very High in the game options."), kind: .config),
 ]
 
 // MARK: - Moteur
@@ -102,6 +103,11 @@ final class Engine: ObservableObject {
                 if let r = shaderRanges(id) { on = (checkShader(data, r, install: true) == .already) }
                 let v = on; DispatchQueue.main.async { self.enabled[id] = v }
             }
+        }
+        if let txt = try? String(contentsOfFile: (c as NSString).appendingPathComponent("Resources/GraphicsRules.sgr"), encoding: .utf8),
+           let pairs = gfxPairs() {
+            let on = gfxState(txt, pairs, install: true) == .already
+            DispatchQueue.main.async { self.enabled["gfxrules"] = on }
         }
         // état du dossier Mods
         if let root = userDataRoot() {
@@ -489,6 +495,50 @@ final class Engine: ObservableObject {
         catch { L(tr("écriture shader: \(error)", "Writing shader: \(error)")); return false }
     }
 
+    // Réglages graphiques (GraphicsRules.sgr) : remplacements de texte vérifiés, aller-retour exact.
+    func gfxPairs() -> [(String, String)]? {
+        let p = (bundleRes as NSString).appendingPathComponent("gfx_rules_patch.json")
+        guard let d = FileManager.default.contents(atPath: p),
+              let obj = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+              let pairs = obj["pairs"] as? [[String]] else { return nil }
+        return pairs.compactMap { $0.count == 2 ? ($0[0], $0[1]) : nil }
+    }
+    func occurrences(_ text: String, _ s: String) -> Int { text.components(separatedBy: s).count - 1 }
+    func gfxState(_ text: String, _ pairs: [(String, String)], install: Bool) -> ShaderState {
+        var todo = false
+        for (o, n) in pairs {
+            let from = install ? o : n, to = install ? n : o
+            if occurrences(text, from) == 1 && occurrences(text, to) == 0 { todo = true }
+            else if occurrences(text, to) == 1 && occurrences(text, from) == 0 { }
+            else { return .incompatible }
+        }
+        return todo ? .needsApply : .already
+    }
+    func patchGfx(_ contents: String, install: Bool) -> Bool {
+        guard let pairs = gfxPairs() else { L(tr("données graphiques absentes.", "Graphics data missing.")); return false }
+        let path = (contents as NSString).appendingPathComponent("Resources/GraphicsRules.sgr")
+        guard var text = try? String(contentsOfFile: path, encoding: .utf8) else { L(tr("GraphicsRules.sgr introuvable.", "GraphicsRules.sgr not found.")); return false }
+        switch gfxState(text, pairs, install: install) {
+        case .already: return true
+        case .incompatible:
+            L(tr("Réglages graphiques : fichier GraphicsRules.sgr différent de celui attendu : non modifié.", "Graphics settings: GraphicsRules.sgr differs from the expected version; not modified."))
+            return false
+        case .needsApply: break
+        }
+        let bdir = (supportDir as NSString).appendingPathComponent("backup")
+        try? FileManager.default.createDirectory(atPath: bdir, withIntermediateDirectories: true)
+        let bk = (bdir as NSString).appendingPathComponent("GraphicsRules.sgr.orig")
+        if !FileManager.default.fileExists(atPath: bk) { try? FileManager.default.copyItem(atPath: path, toPath: bk) }
+        for (o, n) in pairs {
+            let from = install ? o : n, to = install ? n : o
+            if occurrences(text, from) == 1 { text = text.replacingOccurrences(of: from, with: to) }
+        }
+        do { try text.write(toFile: path, atomically: true, encoding: .utf8)
+            L(install ? tr("Réglages graphiques Apple Silicon appliqués.", "Apple Silicon graphics settings applied.") : tr("Réglages graphiques d'origine remis.", "Original graphics settings restored."))
+            return true }
+        catch { L(tr("écriture GraphicsRules.sgr : \(error)", "Writing GraphicsRules.sgr: \(error)")); return false }
+    }
+
     func apply() {
         guard !gamePath.isEmpty, let contents = innerContents(gamePath) else { L(tr("Chemin du jeu invalide.", "Invalid game path.")); return }
         busy = true
@@ -502,6 +552,7 @@ final class Engine: ObservableObject {
             for id in self.packageFiles.keys where modsReady || !(self.enabled[id] ?? false) { _ = self.applyPackage(id, install: self.enabled[id] ?? false) }
             for id in self.overrideFiles.keys where modsReady || !(self.enabled[id] ?? false) { _ = self.applyOverride(id, install: self.enabled[id] ?? false) }
             for id in ["redpool","redflash","frostwindows"] { _ = self.patchShader(contents, id, install: self.enabled[id] ?? false) }
+            _ = self.patchGfx(contents, install: self.enabled["gfxrules"] ?? false)
             self.clearCaches()
             self.L(tr("Terminé. Relance le jeu pour voir les changements.", "Done. Restart the game to see the changes."))
             DispatchQueue.main.async { self.busy = false }
@@ -525,6 +576,7 @@ final class Engine: ObservableObject {
             for id in self.packageFiles.keys { _ = self.applyPackage(id, install: false) }
             for id in self.overrideFiles.keys { _ = self.applyOverride(id, install: false) }
             for id in ["frostwindows","redflash","redpool"] { _ = self.patchShader(contents, id, install: false) }
+            _ = self.patchGfx(contents, install: false)
             self.clearCaches()
             self.L(tr("Tout est revenu à l'origine.", "Everything has been restored to its original state."))
             DispatchQueue.main.async { self.busy = false }
