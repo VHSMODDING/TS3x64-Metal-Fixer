@@ -37,7 +37,7 @@ let FIXES: [Fix] = [
     Fix(id: "redpool", name: tr("Correction piscines rouges","Red pools fix"), detail: "", kind: .shader),
     Fix(id: "redflash", name: tr("Correction flash rose","Pink flash fix"), detail: "", kind: .shader, beta: true),
     Fix(id: "frostwindows", name: tr("Vitres givrées qui clignotent","Flickering frosted windows"), detail: tr("En hiver, les fenêtres des bâtiments communautaires ne clignotent plus.","In winter, community building windows no longer flicker."), kind: .shader),
-    Fix(id: "gfxrules", name: tr("Optimisation des paramètres graphiques conseillés pour Apple Silicon","Recommended graphics settings for Apple Silicon"), detail: tr("Ombres plus nettes, textures et Sims plus détaillés. Mets la qualité des Sims sur « Très élevée » dans les options du jeu.","Sharper shadows, more detailed textures and Sims. Set Sim quality to Very High in the game options."), kind: .config),
+    Fix(id: "gfxrules", name: tr("Optimisation des paramètres graphiques conseillés pour Apple Silicon","Recommended graphics settings for Apple Silicon"), detail: "", kind: .config),
     Fix(id: "perfini", name: tr("Réglages de performance conseillés pour Apple Silicon","Recommended performance settings for Apple Silicon"), detail: tr("Plus de temps de calcul pour les Sims, les chargements et les textures, mémoire de ressources 512 Mo.","More processing time for Sims, loading and textures; 512 MB resource memory."), kind: .config),
 ]
 
@@ -592,6 +592,20 @@ final class Engine: ObservableObject {
 
 // MARK: - UI
 
+func sectionTitle(_ k: FixKind) -> String {
+    switch k {
+    case .native: return tr("AFFICHAGE", "DISPLAY")
+    case .package, .override_: return tr("MODS", "MODS")
+    case .shader: return tr("SHADERS", "SHADERS")
+    case .config: return tr("RÉGLAGES DU JEU", "GAME SETTINGS")
+    }
+}
+// Hauteur adaptée à l'écran (MacBook 13–14 pouces compris), la liste des correctifs défile si besoin.
+let windowHeight: CGFloat = {
+    let avail = NSScreen.main?.visibleFrame.height ?? 800
+    return max(480, min(820, avail - 60))
+}()
+
 struct ContentView: View {
     @StateObject var eng = Engine()
     @State private var showingAbout = false
@@ -615,7 +629,13 @@ struct ContentView: View {
             }
 
             Divider()
-            ForEach(FIXES) { fix in
+            ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(FIXES.enumerated()), id: \.element.id) { i, fix in
+                if i == 0 || sectionTitle(FIXES[i - 1].kind) != sectionTitle(fix.kind) {
+                    Text(sectionTitle(fix.kind)).font(.caption.bold()).foregroundColor(.secondary)
+                        .padding(.top, i == 0 ? 0 : 6)
+                }
                 VStack(alignment: .leading, spacing: 1) {
                     Toggle(isOn: Binding(get: { eng.enabled[fix.id] ?? false }, set: { eng.enabled[fix.id] = $0 })) {
                         HStack(spacing: 6) {
@@ -628,6 +648,9 @@ struct ContentView: View {
                     }
                 }
             }
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 8)
+            }.frame(minHeight: 160, maxHeight: .infinity)
+            Divider()
 
             HStack {
                 Button(action: { eng.apply() }) { Text(tr("Appliquer","Apply")).frame(width:110) }
@@ -642,9 +665,9 @@ struct ContentView: View {
 
             Text(tr("Journal","Log")).font(.caption.bold())
             ScrollView { Text(eng.log).font(.system(.caption, design: .monospaced)).frame(maxWidth:.infinity, alignment:.leading) }
-                .frame(height: 140).background(Color(nsColor: .textBackgroundColor)).cornerRadius(6)
+                .frame(height: 110).background(Color(nsColor: .textBackgroundColor)).cornerRadius(6)
         }
-        .padding(18).frame(width: 560)
+        .padding(18).frame(width: 560, height: windowHeight)
         .onAppear { eng.autodetect() }
         .sheet(isPresented: $showingAbout) { AboutView(show: $showingAbout) }
     }
