@@ -36,7 +36,10 @@ Shader fixes are applied only when the existing bytes match the expected game ve
 
 ### Graphics settings
 
-- **Recommended graphics settings for Apple Silicon** edits the game's `GraphicsRules.sgr`: CPU level set to the highest tier, shadow maps 4096 instead of 2048, texture size threshold 4096, larger intermediate render textures (512/1024), more detailed Sim textures (2048, 2048, 1024, 512) and a higher nearby object detail limit (400). For the Sim textures and object detail, set **Sim quality to Very High** in the game options. Each change is applied only if the file contains the expected original text, and the original file is backed up.
+- **Recommended graphics settings for Apple Silicon** edits the game's `GraphicsRules.sgr`: CPU level set to the highest tier, shadow maps 4096 instead of 2048, texture size threshold 4096, larger intermediate render textures (512/1024), more detailed Sim textures (2048, 2048, 1024, 512) and a higher nearby object detail limit (400). For the Sim textures and object detail, set **Sim quality to Very High** in the game options.
+- **Recommended performance settings for Apple Silicon** edits the game's `Sims3.ini`: more processing time per frame for the simulation, background jobs, resource loading and texture compositing (`[Timeslices]`: SimService 20,20,40,75; JobManager 15,15,35,60; ResourceSystem and TextureCompositor 20,20,50,100, instead of 10,10,25,50), and a 512 MB resource memory (`MemoryUsageLimit`, 20 MB by default). This is the configuration counterpart of Smooth Patch's native part, which does not exist on Mac.
+
+Each settings change is applied only if the file contains the expected original text, and the original file is backed up and restored by **Revert all**.
 
 The app can create the standard Mods folders and `Resource.cfg` when necessary. Existing Resource.cfg rules are preserved; missing root Packages or Overrides rules are appended, with a backup. Overrides priority does not necessarily exceed other custom priorities. Its log reports what it detected and applied. Native fixes modify and ad-hoc sign your own game installation; the tool stores backups (game binary, shaders, graphics settings) in `~/Library/Application Support/TS3MacFixes`.
 

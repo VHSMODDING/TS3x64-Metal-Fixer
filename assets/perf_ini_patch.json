@@ -1,0 +1,27 @@
+{
+ "file": "Resources/Sims3.ini",
+ "base_sha1": "4577e3ab7910caa2904536110ac67570b2dcb85e",
+ "result_sha1": "457c84bda86a2062ae5c2aa39f22dc8a1ea55e63",
+ "pairs": [
+  [
+   "MemoryUsageLimit = 20000000",
+   "MemoryUsageLimit = 536870912"
+  ],
+  [
+   "SimService = 10,10,25,50",
+   "SimService = 20,20,40,75"
+  ],
+  [
+   "JobManager = 10,10,25,50",
+   "JobManager = 15,15,35,60"
+  ],
+  [
+   "ResourceSystem = 10,10,25,50",
+   "ResourceSystem = 20,20,50,100"
+  ],
+  [
+   "TextureCompositor = 10,10,25,50",
+   "TextureCompositor = 20,20,50,100"
+  ]
+ ]
+}
