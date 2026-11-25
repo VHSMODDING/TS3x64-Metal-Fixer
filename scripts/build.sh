@@ -5,6 +5,13 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/ts3-fixer.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 APP="$WORK/stage/TS3 Mac Fixer.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ROOT/dist"
+# bibliothèque injectée dans le jeu (x86_64 : le jeu tourne sous Rosetta)
+xcrun clang -arch x86_64 -mmacosx-version-min=10.13 -dynamiclib -fobjc-arc -O2 \
+    -Wno-unguarded-availability-new -Wno-deprecated-declarations \
+    -o "$ROOT/assets/libts3fix.dylib" "$ROOT"/dylib/*.m "$ROOT/dylib/fishhook.c" \
+    -framework Foundation -framework AppKit -framework CoreGraphics -framework QuartzCore \
+    -framework Metal -framework AudioToolbox -framework CoreAudio
+codesign --force --sign - "$ROOT/assets/libts3fix.dylib"
 for ARCH in arm64 x86_64; do
     xcrun swiftc -parse-as-library -O -target "$ARCH-apple-macos12.0" "$ROOT/app/main.swift" -o "$WORK/TS3MacFixes-$ARCH"
 done

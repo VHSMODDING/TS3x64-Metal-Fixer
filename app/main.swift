@@ -30,11 +30,13 @@ let FIXES: [Fix] = [
     Fix(id: "fullscreen", name: tr("Plein écran","Fullscreen"), detail: "", kind: .native),
     Fix(id: "aniso", name: tr("Filtrage anisotrope","Anisotropic filtering"), detail: tr("Textures du sol plus nettes en biais.","Sharper ground textures at angles."), kind: .native, beta: true),
     Fix(id: "buffering", name: tr("Triple buffering","Triple buffering"), detail: tr("Rendu un peu plus fluide.","Slightly smoother rendering."), kind: .native, beta: true),
+    Fix(id: "snowwalls", name: tr("Murs troués par les routes enneigées","Walls holed by snowy roads"), detail: tr("En hiver, les murs ne laissent plus voir la route derrière eux.","In winter, walls no longer show the road behind them."), kind: .native),
     Fix(id: "oceaninsect", name: tr("Clic océan + insectes","Ocean + insects clicking"), detail: tr("Rend l'océan, les insectes et les collectibles cliquables.","Makes the ocean, insects and collectibles clickable."), kind: .override_),
     Fix(id: "smoothpatch", name: "Smooth Patch", detail: tr("Jeu plus fluide ([LazyDuchess](https://modthesims.info/m/10124945)).","Smoother gameplay ([LazyDuchess](https://modthesims.info/m/10124945))."), kind: .package),
     Fix(id: "sfprofont", name: "Police SF Font Bold", detail: tr("(Police native macOS)","(Native macOS font)"), kind: .override_),
     Fix(id: "redpool", name: tr("Correction piscines rouges","Red pools fix"), detail: "", kind: .shader),
     Fix(id: "redflash", name: tr("Correction flash rose","Pink flash fix"), detail: "", kind: .shader, beta: true),
+    Fix(id: "frostwindows", name: tr("Vitres givrées qui clignotent","Flickering frosted windows"), detail: tr("En hiver, les fenêtres des bâtiments communautaires ne clignotent plus.","In winter, community building windows no longer flicker."), kind: .shader),
 ]
 
 // MARK: - Moteur
@@ -42,7 +44,7 @@ let FIXES: [Fix] = [
 final class Engine: ObservableObject {
     @Published var gamePath: String = ""      // chemin du Sims3Launcher.app (ou The Sims 3.app)
     @Published var log: String = ""
-    @Published var enabled: [String: Bool] = ["resolution": true, "oceaninsect": true, "redpool": true]
+    @Published var enabled: [String: Bool] = ["resolution": true, "oceaninsect": true, "redpool": true, "snowwalls": true, "frostwindows": true]
     @Published var busy = false
 
     var bundleRes: String { Bundle.main.resourcePath ?? "" }
@@ -73,13 +75,14 @@ final class Engine: ObservableObject {
         let macos = (c as NSString).appendingPathComponent("MacOS")
         let hasDylib = fm.fileExists(atPath: (macos as NSString).appendingPathComponent("libts3fix.dylib"))
         var full = false, res = false
-        var aniso = false, buffering = false
+        var aniso = false, buffering = false, snow = false
         if hasDylib, let conf = try? String(contentsOfFile: (supportDir as NSString).appendingPathComponent("ts3fixes.conf"), encoding: .utf8) {
             full = conf.contains("fullscreen=1"); res = conf.contains("resolution=1")
             aniso = conf.contains("aniso=1"); buffering = conf.contains("buffering=1")
+            snow = conf.contains("snowfix=1")
         } else if hasDylib { full = true; res = true; aniso = true; buffering = true }
-        let (f,r,a,bf) = (full,res,aniso,buffering)
-        DispatchQueue.main.async { self.enabled["fullscreen"] = f; self.enabled["resolution"] = r; self.enabled["aniso"] = a; self.enabled["buffering"] = bf }
+        let (f,r,a,bf,sw) = (full,res,aniso,buffering,snow)
+        DispatchQueue.main.async { self.enabled["fullscreen"] = f; self.enabled["resolution"] = r; self.enabled["aniso"] = a; self.enabled["buffering"] = bf; self.enabled["snowwalls"] = sw }
         if let mods = userMods() {
             for (id, file) in packageFiles {
                 let on = fm.fileExists(atPath: (mods as NSString).appendingPathComponent(file))
@@ -94,7 +97,7 @@ final class Engine: ObservableObject {
             }
         }
         if let data = fm.contents(atPath: shaderPath(c)) {
-            for id in ["redpool","redflash"] {
+            for id in ["redpool","redflash","frostwindows"] {
                 var on = false
                 if let r = shaderRanges(id) { on = (checkShader(data, r, install: true) == .already) }
                 let v = on; DispatchQueue.main.async { self.enabled[id] = v }
@@ -295,7 +298,7 @@ final class Engine: ObservableObject {
         }
     }
 
-    let nativeIds = ["resolution","fullscreen","aniso","buffering"]
+    let nativeIds = ["resolution","fullscreen","aniso","buffering","snowwalls"]
     func applyNative(_ contents: String) -> Bool {
         let fm = FileManager.default
         let macos = (contents as NSString).appendingPathComponent("MacOS")
@@ -307,7 +310,7 @@ final class Engine: ObservableObject {
         backupOnce(contents)
         // config dans le dossier utilisateur (PAS dans MacOS/, sinon codesign refuse le bundle)
         func b(_ id: String) -> Int { (enabled[id] ?? false) ? 1 : 0 }
-        let conf = "fullscreen=\(b("fullscreen"))\nresolution=\(b("resolution"))\naniso=\(b("aniso"))\nbuffering=\(b("buffering"))\nss=0\n"
+        let conf = "fullscreen=\(b("fullscreen"))\nresolution=\(b("resolution"))\naniso=\(b("aniso"))\nbuffering=\(b("buffering"))\nsnowfix=\(b("snowwalls"))\nss=0\n"
         try? conf.write(toFile: (supportDir as NSString).appendingPathComponent("ts3fixes.conf"), atomically: true, encoding: .utf8)
         // nettoyer un éventuel ancien conf mal placé
         try? FileManager.default.removeItem(atPath: (macos as NSString).appendingPathComponent("ts3fixes.conf"))
@@ -498,7 +501,7 @@ final class Engine: ObservableObject {
             let modsReady = !(anyPkg || anyOvr) || self.ensureModsSetup()
             for id in self.packageFiles.keys where modsReady || !(self.enabled[id] ?? false) { _ = self.applyPackage(id, install: self.enabled[id] ?? false) }
             for id in self.overrideFiles.keys where modsReady || !(self.enabled[id] ?? false) { _ = self.applyOverride(id, install: self.enabled[id] ?? false) }
-            for id in ["redpool","redflash"] { _ = self.patchShader(contents, id, install: self.enabled[id] ?? false) }
+            for id in ["redpool","redflash","frostwindows"] { _ = self.patchShader(contents, id, install: self.enabled[id] ?? false) }
             self.clearCaches()
             self.L(tr("Terminé. Relance le jeu pour voir les changements.", "Done. Restart the game to see the changes."))
             DispatchQueue.main.async { self.busy = false }
@@ -521,7 +524,7 @@ final class Engine: ObservableObject {
             self.revertNative(contents)
             for id in self.packageFiles.keys { _ = self.applyPackage(id, install: false) }
             for id in self.overrideFiles.keys { _ = self.applyOverride(id, install: false) }
-            for id in ["redflash","redpool"] { _ = self.patchShader(contents, id, install: false) }
+            for id in ["frostwindows","redflash","redpool"] { _ = self.patchShader(contents, id, install: false) }
             self.clearCaches()
             self.L(tr("Tout est revenu à l'origine.", "Everything has been restored to its original state."))
             DispatchQueue.main.async { self.busy = false }
