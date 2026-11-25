@@ -29,3 +29,7 @@ The app can create the standard Mods folders and `Resource.cfg` when necessary. 
 On macOS with the Command Line Tools installed, run `./scripts/build.sh`. The script builds a universal app, packages the supplied resources, signs it ad hoc and creates `dist/TS3 Mac Fixer.dmg`. The prebuilt `assets/libts3fix.dylib` is used by the build; the available native source is in `dylib/`. Signing is ad hoc and the app is not notarized by this build script.
 
 This project is not affiliated with Electronic Arts. The Sims is a trademark of Electronic Arts.
+
+## License
+
+The project's original source code is licensed under the [MIT License](LICENSE), copyright © 2026 VHSmodding. Retain the copyright and license notice when redistributing it. Third-party code and bundled assets are subject to their respective authors' terms; the project license does not override them. Fishhook is distributed under its own [MIT license](dylib/FISHHOOK-LICENSE.txt).
