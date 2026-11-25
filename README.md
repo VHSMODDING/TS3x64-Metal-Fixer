@@ -16,13 +16,13 @@ A macOS tool for applying fixes to your own installation of **The Sims 3 64-bit 
 - **Fullscreen** makes the game window cover the display.
 - **Anisotropic filtering** (beta) sharpens ground textures viewed at an angle.
 - **Triple buffering** (beta) aims to make rendering smoother.
-- **Ocean + insects clicking** restores interaction with the ocean and helps select insects, nanites and sea life. This is a package installed in the game's `Mods/Packages` folder. It replaces `UI.dll` and can conflict with other mods that do the same. If using Tiny UI Fix, install this fix first and then run or regenerate Tiny UI Fix. Remove older OceanPickFix or TS3MacInsectPick packages.
+- **Ocean + insects clicking** restores interaction with the ocean and helps select insects, nanites and sea life. This is a package installed in the game's `Mods/Overrides` folder (migrated from `Packages` when applying). It replaces `UI.dll` and can conflict with other mods that do the same. If using Tiny UI Fix, install this fix first and then run or regenerate Tiny UI Fix. Remove older OceanPickFix or TS3MacInsectPick packages.
 - **Smooth Patch** installs the included Smooth Patch package for smoother gameplay. Credit: [LazyDuchess](https://modthesims.info/m/10124945).
 - **SF Font Bold** installs a macOS-style font override.
 - **Red pools fix** corrects the red/pink appearance of pool water.
 - **Pink flash fix** (beta) patches the affected shader. Shader fixes are applied only when the existing bytes match the expected game version.
 
-The app can create the standard Mods folders and `Resource.cfg` when necessary. Its log reports what it detected and applied. Native fixes modify and ad-hoc sign your own game installation; the tool stores backups in `~/Library/Application Support/TS3MacFixes`.
+The app can create the standard Mods folders and `Resource.cfg` when necessary. Existing Resource.cfg rules are preserved; missing root Packages or Overrides rules are appended, with a backup. Overrides priority does not necessarily exceed other custom priorities. Its log reports what it detected and applied. Native fixes modify and ad-hoc sign your own game installation; the tool stores backups in `~/Library/Application Support/TS3MacFixes`.
 
 ## Build
 

@@ -30,7 +30,7 @@ let FIXES: [Fix] = [
     Fix(id: "fullscreen", name: tr("Plein écran","Fullscreen"), detail: "", kind: .native),
     Fix(id: "aniso", name: tr("Filtrage anisotrope","Anisotropic filtering"), detail: tr("Textures du sol plus nettes en biais.","Sharper ground textures at angles."), kind: .native, beta: true),
     Fix(id: "buffering", name: tr("Triple buffering","Triple buffering"), detail: tr("Rendu un peu plus fluide.","Slightly smoother rendering."), kind: .native, beta: true),
-    Fix(id: "oceaninsect", name: tr("Clic océan + insectes","Ocean + insects clicking"), detail: tr("Rend l'océan, les insectes et les collectibles cliquables.","Makes the ocean, insects and collectibles clickable."), kind: .package),
+    Fix(id: "oceaninsect", name: tr("Clic océan + insectes","Ocean + insects clicking"), detail: tr("Rend l'océan, les insectes et les collectibles cliquables.","Makes the ocean, insects and collectibles clickable."), kind: .override_),
     Fix(id: "smoothpatch", name: "Smooth Patch", detail: tr("Jeu plus fluide ([LazyDuchess](https://modthesims.info/m/10124945)).","Smoother gameplay ([LazyDuchess](https://modthesims.info/m/10124945))."), kind: .package),
     Fix(id: "sfprofont", name: "Police SF Font Bold", detail: tr("(Police native macOS)","(Native macOS font)"), kind: .override_),
     Fix(id: "redpool", name: tr("Correction piscines rouges","Red pools fix"), detail: "", kind: .shader),
@@ -88,7 +88,8 @@ final class Engine: ObservableObject {
         }
         if let overrides = userOverrides() {
             for (id, file) in overrideFiles {
-                let on = fm.fileExists(atPath: (overrides as NSString).appendingPathComponent(file))
+                let legacy = id == "oceaninsect" && userMods().map { fm.fileExists(atPath: ($0 as NSString).appendingPathComponent(file)) } == true
+                let on = legacy || fm.fileExists(atPath: (overrides as NSString).appendingPathComponent(file))
                 DispatchQueue.main.async { self.enabled[id] = on }
             }
         }
@@ -193,17 +194,39 @@ final class Engine: ObservableObject {
         let mods = (root as NSString).appendingPathComponent("Mods")
         let pkgs = (mods as NSString).appendingPathComponent("Packages")
         let over = (mods as NSString).appendingPathComponent("Overrides")
-        for d in [mods, pkgs, over] where !fm.fileExists(atPath: d) {
-            try? fm.createDirectory(atPath: d, withIntermediateDirectories: true); L(tr("Créé : \(d)", "Created: \(d)"))
-        }
-        let cfg = (mods as NSString).appendingPathComponent("Resource.cfg")
-        let existing = try? String(contentsOfFile: cfg, encoding: .utf8)
-        if existing == nil || !(existing!.contains("Packages/*.package")) {
-            if existing != nil { try? fm.copyItem(atPath: cfg, toPath: cfg + ".bak_ts3macfixes") }
-            try? Engine.resourcesCfg.write(toFile: cfg, atomically: true, encoding: .utf8)
-            L(existing == nil ? tr("Resource.cfg créé.", "Resource.cfg created.") : tr("Resource.cfg mis à jour.", "Resource.cfg updated."))
-        } else {
-            L(tr("Resource.cfg déjà configuré.", "Resource.cfg is already configured."))
+        do {
+            for d in [mods, pkgs, over] where !fm.fileExists(atPath: d) {
+                try fm.createDirectory(atPath: d, withIntermediateDirectories: true)
+                L(tr("Créé : \(d)", "Created: \(d)"))
+            }
+            let cfg = (mods as NSString).appendingPathComponent("Resource.cfg")
+            if !fm.fileExists(atPath: cfg) {
+                try Engine.resourcesCfg.write(toFile: cfg, atomically: true, encoding: .utf8)
+                L(tr("Resource.cfg créé.", "Resource.cfg created."))
+            } else {
+                let existing = try String(contentsOfFile: cfg, encoding: .utf8)
+                let lines = existing.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+                func hasRule(_ path: String) -> Bool {
+                    lines.contains { line in
+                        let parts = line.split(whereSeparator: { $0.isWhitespace })
+                        return parts.count >= 2 && parts[0] == "packedfile" && parts[1] == Substring(path)
+                    }
+                }
+                var additions = ""
+                if !hasRule("packages/*.package") { additions += "\nPriority 500\nPackedFile Packages/*.package\n" }
+                if !hasRule("overrides/*.package") { additions += "\nPriority 1000\nPackedFile Overrides/*.package\n" }
+                if additions.isEmpty {
+                    L(tr("Resource.cfg déjà configuré.", "Resource.cfg is already configured."))
+                } else {
+                    let backup = cfg + ".bak_ts3macfixes"
+                    if !fm.fileExists(atPath: backup) { try fm.copyItem(atPath: cfg, toPath: backup) }
+                    try (existing + "\n" + additions).write(toFile: cfg, atomically: true, encoding: .utf8)
+                    L(tr("Resource.cfg mis à jour (sauvegarde conservée).", "Resource.cfg updated (backup preserved)."))
+                }
+            }
+        } catch {
+            L(tr("Impossible de configurer Mods : \(error)", "Could not configure Mods: \(error)"))
+            return false
         }
         return true
     }
@@ -322,11 +345,11 @@ final class Engine: ObservableObject {
     }
 
     let packageFiles: [String: String] = [
-        "oceaninsect": "TS3Mac_OceanAndInsectPicker.package",
         "smoothpatch": "SmoothPatchMac.package",
     ]
 
     let overrideFiles: [String: String] = [
+        "oceaninsect": "TS3Mac_OceanAndInsectPicker.package",
         "sfprofont": "SFPro_FontReplacement.package",
     ]
 
@@ -338,17 +361,29 @@ final class Engine: ObservableObject {
     func applyOverride(_ id: String, install: Bool) -> Bool {
         guard let file = overrideFiles[id] else { return false }
         guard let overrides = userOverrides() else { L(tr("Dossier Mods introuvable (lance le jeu une fois ?).", "Mods folder not found (launch the game once first).")); return false }
+        let fm = FileManager.default
         let dst = (overrides as NSString).appendingPathComponent(file)
-        if !install {
-            if FileManager.default.fileExists(atPath: dst) { try? FileManager.default.removeItem(atPath: dst); L(tr("Override retiré : \(file)", "Override removed: \(file)")) }
+        let legacy = id == "oceaninsect" ? userMods().map { ($0 as NSString).appendingPathComponent(file) } : nil
+        do {
+            if !install {
+                for path in [dst, legacy].compactMap({ $0 }) where fm.fileExists(atPath: path) {
+                    try fm.removeItem(atPath: path)
+                    L(tr("Override retiré : \(path)", "Override removed: \(path)"))
+                }
+                return true
+            }
+            let src = (bundleRes as NSString).appendingPathComponent(file)
+            guard fm.fileExists(atPath: src) else { L(tr("override \(file) absent du bundle.", "Override \(file) missing from the app bundle.")); return false }
+            try fm.createDirectory(atPath: overrides, withIntermediateDirectories: true)
+            if fm.fileExists(atPath: dst) { try fm.removeItem(atPath: dst) }
+            try fm.copyItem(atPath: src, toPath: dst)
+            if let old = legacy, fm.fileExists(atPath: old) { try fm.removeItem(atPath: old) }
+            L(tr("Override installé : \(file)", "Override installed: \(file)"))
             return true
+        } catch {
+            L(tr("copie ou suppression override : \(error)", "Copying or removing override: \(error)"))
+            return false
         }
-        try? FileManager.default.createDirectory(atPath: overrides, withIntermediateDirectories: true)
-        let src = (bundleRes as NSString).appendingPathComponent(file)
-        guard FileManager.default.fileExists(atPath: src) else { L(tr("override \(file) absent du bundle.", "Override \(file) missing from the app bundle.")); return false }
-        try? FileManager.default.removeItem(atPath: dst)
-        do { try FileManager.default.copyItem(atPath: src, toPath: dst); L(tr("Override installé : \(file)", "Override installed: \(file)")); return true }
-        catch { L(tr("copie override: \(error)", "Copying override: \(error)")); return false }
     }
 
     // Vide les caches TS3 pour forcer le (re)chargement des mods au prochain lancement.
@@ -460,9 +495,9 @@ final class Engine: ObservableObject {
             else { self.revertNative(contents) } // aucun natif coché => on nettoie le natif
             let anyPkg = self.packageFiles.keys.contains { self.enabled[$0] ?? false }
             let anyOvr = self.overrideFiles.keys.contains { self.enabled[$0] ?? false }
-            if anyPkg || anyOvr { self.ensureModsSetup() }
-            for id in self.packageFiles.keys { _ = self.applyPackage(id, install: self.enabled[id] ?? false) }
-            for id in self.overrideFiles.keys { _ = self.applyOverride(id, install: self.enabled[id] ?? false) }
+            let modsReady = !(anyPkg || anyOvr) || self.ensureModsSetup()
+            for id in self.packageFiles.keys where modsReady || !(self.enabled[id] ?? false) { _ = self.applyPackage(id, install: self.enabled[id] ?? false) }
+            for id in self.overrideFiles.keys where modsReady || !(self.enabled[id] ?? false) { _ = self.applyOverride(id, install: self.enabled[id] ?? false) }
             for id in ["redpool","redflash"] { _ = self.patchShader(contents, id, install: self.enabled[id] ?? false) }
             self.clearCaches()
             self.L(tr("Terminé. Relance le jeu pour voir les changements.", "Done. Restart the game to see the changes."))
