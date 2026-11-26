@@ -1,7 +1,7 @@
 {
  "file": "Resources/GraphicsRules.sgr",
  "base_sha1": "ce459837592d7a22bb417fdc2ee37864d53e3e91",
- "result_sha1": "f4e9b417d56ed118d9602e3f0ed0e9e5e9a23c1e",
+ "result_sha1": "2c9419584582215cc7f25888b810fe332e739eb0",
  "pairs": [
   [
    "endif\nif ($forcedCpuLevel > 0)",
@@ -22,6 +22,10 @@
   [
    "\tprop $ConfigGroup ActiveLODLimit 200\n\tprop $ConfigGroup ShaderSkinCompositing true\nend",
    "\tprop $ConfigGroup ActiveLODLimit 400\n\tprop $ConfigGroup ShaderSkinCompositing true\nend"
+  ],
+  [
+   "seti MemCacheBudgetValue  209715200",
+   "seti MemCacheBudgetValue  4147483648"
   ]
  ]
 }
