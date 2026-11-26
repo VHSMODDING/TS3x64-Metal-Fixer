@@ -1,3 +1,4 @@
+
 # TS3 Mac Fixer
 
 A macOS tool for applying fixes to your own installation of **The Sims 3 64-bit & Metal**. The app supports Apple Silicon and Intel Macs running macOS 12 or later.
@@ -9,6 +10,26 @@ A macOS tool for applying fixes to your own installation of **The Sims 3 64-bit 
 3. Let the app detect the game, or use **Browse** to select `Sims3Launcher.app` or the game's inner `The Sims 3.app`. The app searches Applications subfolders (including `EA Games`) and uses Spotlight to find indexed installations elsewhere.
 4. Select the fixes you want, click **Apply**, then restart the game. Launch the game once before applying package fixes so that its Documents folder exists.
 5. Use **Revert all** to remove the fixes and restore the backed-up native game files.
+
+## Important – Please read before applying fixes
+
+> [!WARNING]
+> Some fixes may be incompatible with Tiny UI Fix or other third-party mods.
+> You do not need to enable every available fix or reorganize your entire Mods folder.
+> Choose only the options that suit your setup and needs.
+
+The fixes work well on my personal setup, a Mac with an Apple M1 Pro and 32 GB of RAM. I mainly use the standard fixes alongside several NRaas mods, including PortraitPanel and Relativity.
+
+However, every game installation, hardware configuration and mod collection is different. Compatibility with every existing mod cannot be guaranteed.
+
+If you experience crashes, graphical glitches, performance issues or unexpected behavior:
+
+- Disable individual fixes to identify potential conflicts.
+- Review or adjust your installed mods if necessary.
+- If you use Tiny UI Fix, follow the compatibility instructions provided in the Ocean + insects clicking section.
+- Use **Revert all** if you need to restore the original game files.
+
+**Remember that all fixes are optional. More fixes do not necessarily mean better performance or stability.**
 
 ## Included fixes
 
