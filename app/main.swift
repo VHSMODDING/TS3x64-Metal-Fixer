@@ -35,11 +35,12 @@ let FIXES: [Fix] = [
     Fix(id: "oceaninsect", name: tr("Clic océan + insectes","Ocean + insects clicking"), detail: tr("Rend l'océan, les insectes et les collectibles cliquables.","Makes the ocean, insects and collectibles clickable."), kind: .override_),
     Fix(id: "smoothpatch", name: "Smooth Patch", detail: tr("Jeu plus fluide ([LazyDuchess](https://modthesims.info/m/10124945)).","Smoother gameplay ([LazyDuchess](https://modthesims.info/m/10124945))."), kind: .package),
     Fix(id: "sfprofont", name: "Police SF Font Bold", detail: tr("(Police native macOS)","(Native macOS font)"), kind: .override_),
+    Fix(id: "eyelashes", name: tr("Cils EA buggés","Buggy EA eyelashes"), detail: tr("Retire les cils EA qui bugguent ([Slamyy](https://modthesims.info/m/10188588)).","Removes buggy EA eyelashes ([Slamyy](https://modthesims.info/m/10188588))."), kind: .override_),
     Fix(id: "redpool", name: tr("Correction piscines rouges","Red pools fix"), detail: "", kind: .shader),
     Fix(id: "redflash", name: tr("Correction flash rose","Pink flash fix"), detail: "", kind: .shader, beta: true),
     Fix(id: "frostwindows", name: tr("Vitres givrées qui clignotent","Flickering frosted windows"), detail: tr("En hiver, les fenêtres des bâtiments communautaires ne clignotent plus.","In winter, community building windows no longer flicker."), kind: .shader),
     Fix(id: "gfxrules", name: tr("Optimisation des paramètres graphiques conseillés pour Apple Silicon","Recommended graphics settings for Apple Silicon"), detail: "", kind: .config),
-    Fix(id: "perfini", name: tr("Réglages de performance conseillés pour Apple Silicon","Recommended performance settings for Apple Silicon"), detail: tr("Plus de temps de calcul pour les Sims, les chargements et les textures, mémoire de ressources 512 Mo.","More processing time for Sims, loading and textures; 512 MB resource memory."), kind: .config),
+    Fix(id: "perfini", name: tr("Réglages de performance conseillés pour Apple Silicon","Recommended performance settings for Apple Silicon"), detail: tr("Plus de temps de calcul pour les Sims, les chargements et les textures, mémoire de ressources ~4 Go.","More processing time for Sims, loading and textures; ~4 GB resource memory."), kind: .config),
 ]
 
 // MARK: - Moteur
@@ -364,6 +365,7 @@ final class Engine: ObservableObject {
     let overrideFiles: [String: String] = [
         "oceaninsect": "TS3Mac_OceanAndInsectPicker.package",
         "sfprofont": "SFPro_FontReplacement.package",
+        "eyelashes": "SLAMYY_DR_EyelashMeshTerminator.package",
     ]
 
     func userOverrides() -> String? {

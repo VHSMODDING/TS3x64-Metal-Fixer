@@ -18,7 +18,7 @@ A macOS tool for applying fixes to your own installation of **The Sims 3 64-bit 
 > You do not need to enable every available fix or reorganize your entire Mods folder.
 > Choose only the options that suit your setup and needs.
 
-The fixes work well on my personal setup, a Mac with an Apple M1 Pro and 32 GB of RAM. I mainly use the standard fixes alongside several NRaas mods, including PortraitPanel and Relativity.
+The fixes work well on my personal setup, a Mac with an Apple M1 Pro and 32 GB of RAM. I mainly use the standard fixes alongside several NRaas mods, including PortraitPanel and Relativity etc.
 
 However, every game installation, hardware configuration and mod collection is different. Compatibility with every existing mod cannot be guaranteed.
 
@@ -47,6 +47,7 @@ If you experience crashes, graphical glitches, performance issues or unexpected 
 - **Ocean + insects clicking** restores interaction with the ocean and helps select insects, nanites and sea life. This is a package installed in the game's `Mods/Overrides` folder (migrated from `Packages` when applying). It replaces `UI.dll` and can conflict with other mods that do the same. If using Tiny UI Fix, install this fix first and then run or regenerate Tiny UI Fix. Remove older OceanPickFix or TS3MacInsectPick packages.
 - **Smooth Patch** installs the included Smooth Patch package for smoother gameplay. Credit: [LazyDuchess](https://modthesims.info/m/10124945).
 - **SF Font Bold** installs a macOS-style font override.
+- **Buggy EA eyelashes** removes the broken EA eyelash meshes with a default replacement installed in `Mods/Overrides`. Credit: [Slamyy](https://modthesims.info/m/10188588).
 
 ### Shaders
 
@@ -59,7 +60,7 @@ Shader fixes are applied only when the existing bytes match the expected game ve
 ### Graphics settings
 
 - **Recommended graphics settings for Apple Silicon** edits the game's `GraphicsRules.sgr`: CPU level set to the highest tier, shadow maps 4096 instead of 2048, texture size threshold 4096, larger intermediate render textures (512/1024), more detailed Sim textures (2048, 2048, 1024, 512), a higher nearby object detail limit (400) and a resource memory cache of about 3.9 GB instead of 200 MB (`MemCacheBudgetValue` 4147483648, the largest value commonly used on Windows; the setting is a 32-bit number, so larger values such as 6 GB are truncated). This keeps more game resources in memory and reduces reloading when moving the camera or changing lots. For the Sim textures and object detail, set **Sim quality to Very High** in the game options.
-- **Recommended performance settings for Apple Silicon** edits the game's `Sims3.ini`: more processing time per frame for the simulation, background jobs, resource loading and texture compositing (`[Timeslices]`: SimService 20,20,40,75; JobManager 15,15,35,60; ResourceSystem and TextureCompositor 20,20,50,100, instead of 10,10,25,50), and a 512 MB resource memory (`MemoryUsageLimit`, 20 MB by default). This is the configuration counterpart of Smooth Patch's native part, which does not exist on Mac.
+- **Recommended performance settings for Apple Silicon** edits the game's `Sims3.ini`: more processing time per frame for the simulation, background jobs, resource loading and texture compositing (`[Timeslices]`: SimService 20,20,40,75; JobManager 15,15,35,60; ResourceSystem and TextureCompositor 20,20,50,100, instead of 10,10,25,50), and a resource memory limit of about 3.9 GB (`MemoryUsageLimit` 4176855695, 20 MB by default). This is the configuration counterpart of Smooth Patch's native part, which does not exist on Mac.
 
 Each settings change is applied only if the file contains the expected original text, and the original file is backed up and restored by **Revert all**.
 

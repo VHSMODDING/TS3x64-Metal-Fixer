@@ -1,11 +1,11 @@
 {
  "file": "Resources/Sims3.ini",
  "base_sha1": "4577e3ab7910caa2904536110ac67570b2dcb85e",
- "result_sha1": "457c84bda86a2062ae5c2aa39f22dc8a1ea55e63",
+ "result_sha1": "ff6b1d64ce9910c2aeec2205a20ce279b46782d9",
  "pairs": [
   [
    "MemoryUsageLimit = 20000000",
-   "MemoryUsageLimit = 536870912"
+   "MemoryUsageLimit = 4176855695"
   ],
   [
    "SimService = 10,10,25,50",
