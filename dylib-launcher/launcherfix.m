@@ -261,6 +261,31 @@ static NSURL *GameBundleURL(const char *path) {
     return [NSURL fileURLWithPath:bundle];
 }
 
+// Le launcher écrit la liste des .Sims3Pack dans un fichier temporaire et le
+// supprime dès que son processus fils se termine. Comme /usr/bin/open rend la
+// main tout de suite, la liste disparaît avant que le jeu, démarré un instant
+// plus tard par LaunchServices, ait pu la lire — d'où « aucun ensemble de
+// fichiers à installer ». On en garde donc une copie à nous, que personne
+// d'autre n'efface, et c'est elle qu'on passe au jeu.
+static NSString *StableListCopy(NSString *list) {
+    NSData *d = [NSData dataWithContentsOfFile:list];
+    if (!d) return nil;
+    NSString *dir = [NSHomeDirectory() stringByAppendingPathComponent:
+                     @"Library/Application Support/TS3MacFixes/launcher-lists"];
+    NSFileManager *fm = NSFileManager.defaultManager;
+    if (![fm createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:NULL]) return nil;
+    // ménage : les copies de plus d'un jour
+    NSDate *cutoff = [NSDate dateWithTimeIntervalSinceNow:-86400];
+    for (NSString *old in [fm contentsOfDirectoryAtPath:dir error:NULL]) {
+        NSString *f = [dir stringByAppendingPathComponent:old];
+        NSDate *m = [fm attributesOfItemAtPath:f error:NULL].fileModificationDate;
+        if (m && [m compare:cutoff] == NSOrderedAscending) [fm removeItemAtPath:f error:NULL];
+    }
+    NSString *dst = [dir stringByAppendingPathComponent:
+                     [NSString stringWithFormat:@"%@-%@", NSUUID.UUID.UUIDString, list.lastPathComponent]];
+    return [d writeToFile:dst atomically:YES] ? dst : nil;
+}
+
 // On relance le jeu par /usr/bin/open (donc par LaunchServices) tout en restant
 // un vrai posix_spawn : le launcher reçoit un vrai processus fils, comme avant.
 static int SpawnViaOpen(pid_t *pid, NSString *bundle,
@@ -273,7 +298,13 @@ static int SpawnViaOpen(pid_t *pid, NSString *bundle,
         // EA entoure le chemin de guillemets, qu'aucun shell ne retire ici
         NSString *arg = [[NSString stringWithUTF8String:argv[i]]
                          stringByReplacingOccurrencesOfString:@"\"" withString:@""];
-        if (arg.length) [a addObject:arg];
+        if (!arg.length) continue;
+        for (NSString *opt in @[@"-ccinstall:", @"-ccuninstall:"]) {
+            if (![arg hasPrefix:opt]) continue;
+            NSString *copy = StableListCopy([arg substringFromIndex:opt.length]);
+            if (copy) arg = [opt stringByAppendingString:copy];
+        }
+        [a addObject:arg];
     }
     for (NSString *arg in a) {
         if (![arg hasPrefix:@"-ccinstall:"] && ![arg hasPrefix:@"-ccuninstall:"]) continue;
@@ -296,11 +327,25 @@ static int SpawnViaOpen(pid_t *pid, NSString *bundle,
     return r;
 }
 
+// Quand c'est l'app EA qui a démarré le launcher, elle lui transmet une session
+// (EALicenseToken, EALaunchCode, EARtPLaunchCode, EALsxPort…). Le jeu lancé par
+// posix_spawn en hérite, et c'est précisément ce que son contrôle de licence
+// attend pour accepter des paramètres comme -ccinstall. LaunchServices, lui,
+// démarre le jeu avec un environnement propre : la session est perdue et le jeu
+// repart aussitôt. Donc : session présente -> on ne touche à rien.
+static BOOL StartedByEAApp(void) {
+    return getenv("EALicenseToken") || getenv("EALaunchCode") || getenv("EARtPLaunchCode");
+}
+
 static int ts3_posix_spawn(pid_t *pid, const char *path,
                            const posix_spawn_file_actions_t *fa,
                            const posix_spawnattr_t *attr,
                            char *const argv[], char *const envp[]) {
     NSURL *bundle = GameBundleURL(path);
+    if (bundle && StartedByEAApp()) {
+        FixLog(@"session EA présente : lancement d'origine du jeu, environnement conservé");
+        return posix_spawn(pid, path, fa, attr, argv, envp);
+    }
     if (bundle) {
         int r = SpawnViaOpen(pid, bundle.path, fa, attr, argv, envp);
         if (r == 0) return 0;
