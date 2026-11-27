@@ -15,7 +15,7 @@ func md(_ s: String) -> AttributedString {
 
 // MARK: - Modèle
 
-enum FixKind { case native, package, override_, shader, config }
+enum FixKind { case native, package, override_, shader, config, launcher }
 
 struct Fix: Identifiable {
     let id: String
@@ -41,6 +41,7 @@ let FIXES: [Fix] = [
     Fix(id: "frostwindows", name: tr("Vitres givrées qui clignotent","Flickering frosted windows"), detail: tr("En hiver, les fenêtres des bâtiments communautaires ne clignotent plus.","In winter, community building windows no longer flicker."), kind: .shader),
     Fix(id: "gfxrules", name: tr("Optimisation des paramètres graphiques conseillés pour Apple Silicon","Recommended graphics settings for Apple Silicon"), detail: "", kind: .config),
     Fix(id: "perfini", name: tr("Réglages de performance conseillés pour Apple Silicon","Recommended performance settings for Apple Silicon"), detail: tr("Plus de temps de calcul pour les Sims, les chargements et les textures, mémoire de ressources ~4 Go.","More processing time for Sims, loading and textures; ~4 GB resource memory."), kind: .config),
+    Fix(id: "launcherfix", name: tr("Lanceur buggé","Buggy launcher"), detail: "", kind: .launcher),
 ]
 
 // MARK: - Moteur
@@ -48,7 +49,7 @@ let FIXES: [Fix] = [
 final class Engine: ObservableObject {
     @Published var gamePath: String = ""      // chemin du Sims3Launcher.app (ou The Sims 3.app)
     @Published var log: String = ""
-    @Published var enabled: [String: Bool] = ["resolution": true, "oceaninsect": true, "redpool": true, "snowwalls": true, "frostwindows": true, "terrainpaint": true]
+    @Published var enabled: [String: Bool] = ["resolution": true, "oceaninsect": true, "redpool": true, "snowwalls": true, "frostwindows": true, "terrainpaint": true, "launcherfix": true]
     @Published var busy = false
 
     var bundleRes: String { Bundle.main.resourcePath ?? "" }
@@ -114,6 +115,8 @@ final class Engine: ObservableObject {
                 DispatchQueue.main.async { self.enabled[id] = on }
             }
         }
+        let lf = launcherFixInstalled()
+        DispatchQueue.main.async { self.enabled["launcherfix"] = lf }
         // état du dossier Mods
         if let root = userDataRoot() {
             let mods = (root as NSString).appendingPathComponent("Mods")
@@ -254,9 +257,9 @@ final class Engine: ObservableObject {
     }
 
     // MARK: Mach-O : insérer LC_LOAD_DYLIB @loader_path/libts3fix.dylib si absent
-    func ensureLoadCommand(_ binaryPath: String) -> Bool {
+    func ensureLoadCommand(_ binaryPath: String, _ dylibName: String = "libts3fix.dylib") -> Bool {
         guard var d = FileManager.default.contents(atPath: binaryPath) else { L(tr("binaire introuvable", "Binary not found")); return false }
-        let name = "@loader_path/libts3fix.dylib"
+        let name = "@loader_path/" + dylibName
         if d.withUnsafeBytes({ raw -> Bool in
             let p = raw.bindMemory(to: UInt8.self)
             let nameBytes = Array(name.utf8)
@@ -356,6 +359,93 @@ final class Engine: ObservableObject {
         try? fm.removeItem(atPath: (macos as NSString).appendingPathComponent("ts3fixes.conf"))
         try? fm.removeItem(atPath: (supportDir as NSString).appendingPathComponent("ts3fixes.conf"))
         L(tr("Correctifs natifs retirés.", "Native fixes removed."))
+    }
+
+
+    // MARK: Lanceur (Sims3Launcher.app) : correctifs du launcher d'EA
+
+    // Le chemin choisi peut être Sims3Launcher.app ou le The Sims 3.app qu'il contient.
+    func launcherApp(_ picked: String) -> String? {
+        let fm = FileManager.default
+        func isLauncher(_ app: String) -> Bool {
+            guard let d = NSDictionary(contentsOfFile: (app as NSString).appendingPathComponent("Contents/Info.plist")),
+                  let ident = d["CFBundleIdentifier"] as? String, ident.contains("thesims3.launcher"),
+                  let exe = d["CFBundleExecutable"] as? String else { return false }
+            return fm.fileExists(atPath: (app as NSString).appendingPathComponent("Contents/MacOS/" + exe))
+        }
+        if isLauncher(picked) { return picked }
+        // .../Sims3Launcher.app/Contents/Resources/The Sims 3.app -> remonter de trois niveaux
+        var up = picked as NSString
+        for _ in 0..<3 { up = up.deletingLastPathComponent as NSString }
+        return isLauncher(up as String) ? (up as String) : nil
+    }
+
+    func launcherBinary(_ app: String) -> String? {
+        guard let d = NSDictionary(contentsOfFile: (app as NSString).appendingPathComponent("Contents/Info.plist")),
+              let exe = d["CFBundleExecutable"] as? String else { return nil }
+        return (app as NSString).appendingPathComponent("Contents/MacOS/" + exe)
+    }
+
+    func launcherFixInstalled() -> Bool {
+        guard let app = launcherApp(gamePath), let bin = launcherBinary(app) else { return false }
+        let macos = (bin as NSString).deletingLastPathComponent
+        return FileManager.default.fileExists(atPath: (macos as NSString).appendingPathComponent("libts3launcherfix.dylib"))
+    }
+
+    func applyLauncherFix(install: Bool) -> Bool {
+        let fm = FileManager.default
+        guard let app = launcherApp(gamePath), let bin = launcherBinary(app) else {
+            if install { L(tr("Sims3Launcher.app introuvable : correctif du lanceur ignoré.",
+                              "Sims3Launcher.app not found; launcher fix skipped.")) }
+            return false
+        }
+        let macos = (bin as NSString).deletingLastPathComponent
+        let dylibDst = (macos as NSString).appendingPathComponent("libts3launcherfix.dylib")
+        let bdir = (supportDir as NSString).appendingPathComponent("backup")
+        try? fm.createDirectory(atPath: bdir, withIntermediateDirectories: true)
+        let binBK = (bdir as NSString).appendingPathComponent("Launcher.bin.original")
+        let csSrc = (app as NSString).appendingPathComponent("Contents/_CodeSignature")
+        let csBK = (bdir as NSString).appendingPathComponent("Launcher_CodeSignature.original")
+
+        if !install {
+            if fm.fileExists(atPath: binBK) {
+                try? fm.removeItem(atPath: bin)
+                try? fm.copyItem(atPath: binBK, toPath: bin)
+                if fm.fileExists(atPath: csBK) {
+                    try? fm.removeItem(atPath: csSrc); try? fm.copyItem(atPath: csBK, toPath: csSrc)
+                }
+                L(tr("Lanceur : binaire et signature d'origine restaurés.",
+                     "Launcher: original binary and signature restored."))
+            }
+            try? fm.removeItem(atPath: dylibDst)
+            return true
+        }
+
+        let dylibSrc = (bundleRes as NSString).appendingPathComponent("libts3launcherfix.dylib")
+        let ent = (bundleRes as NSString).appendingPathComponent("entitlements.plist")
+        guard fm.fileExists(atPath: dylibSrc) else {
+            L(tr("dylib du lanceur absente du bundle.", "Launcher dylib missing from the app bundle.")); return false
+        }
+        if !fm.fileExists(atPath: binBK) {
+            try? fm.copyItem(atPath: bin, toPath: binBK)
+            if fm.fileExists(atPath: csSrc), !fm.fileExists(atPath: csBK) {
+                try? fm.copyItem(atPath: csSrc, toPath: csBK)
+            }
+            L(tr("Lanceur : sauvegarde d'origine créée.", "Launcher: original backup created."))
+        }
+        try? fm.removeItem(atPath: dylibDst)
+        do { try fm.copyItem(atPath: dylibSrc, toPath: dylibDst) }
+        catch { L(tr("copie dylib du lanceur : \(error)", "Copying launcher dylib: \(error)")); return false }
+        _ = run("/usr/bin/codesign", ["-f","-s","-", dylibDst])
+        // on repart du binaire d'origine pour ne jamais empiler deux load commands
+        try? fm.removeItem(atPath: bin)
+        try? fm.copyItem(atPath: binBK, toPath: bin)
+        if !ensureLoadCommand(bin, "libts3launcherfix.dylib") { return false }
+        let (rc, out) = run("/usr/bin/codesign", ["-f","-s","-","--entitlements", ent, app])
+        if rc != 0 { L(tr("codesign du lanceur a échoué:\n\(out)", "Launcher code signing failed:\n\(out)")); return false }
+        _ = run("/usr/bin/xattr", ["-dr","com.apple.quarantine", app])
+        L(tr("Lanceur : correctifs appliqués.", "Launcher: fixes applied."))
+        return true
     }
 
     let packageFiles: [String: String] = [
@@ -562,6 +652,7 @@ final class Engine: ObservableObject {
             for id in self.overrideFiles.keys where modsReady || !(self.enabled[id] ?? false) { _ = self.applyOverride(id, install: self.enabled[id] ?? false) }
             for id in ["redpool","redflash","frostwindows"] { _ = self.patchShader(contents, id, install: self.enabled[id] ?? false) }
             for c in self.configPatches { _ = self.patchConfig(contents, c.json, install: self.enabled[c.id] ?? false) }
+            _ = self.applyLauncherFix(install: self.enabled["launcherfix"] ?? false)
             self.clearCaches()
             self.L(tr("Terminé. Relance le jeu pour voir les changements.", "Done. Restart the game to see the changes."))
             DispatchQueue.main.async { self.busy = false }
@@ -586,6 +677,7 @@ final class Engine: ObservableObject {
             for id in self.overrideFiles.keys { _ = self.applyOverride(id, install: false) }
             for id in ["frostwindows","redflash","redpool"] { _ = self.patchShader(contents, id, install: false) }
             for c in self.configPatches { _ = self.patchConfig(contents, c.json, install: false) }
+            _ = self.applyLauncherFix(install: false)
             self.clearCaches()
             self.L(tr("Tout est revenu à l'origine.", "Everything has been restored to its original state."))
             DispatchQueue.main.async { self.busy = false }
@@ -601,6 +693,7 @@ func sectionTitle(_ k: FixKind) -> String {
     case .package, .override_: return tr("MODS", "MODS")
     case .shader: return tr("SHADERS", "SHADERS")
     case .config: return tr("RÉGLAGES DU JEU", "GAME SETTINGS")
+    case .launcher: return tr("LANCEUR", "LAUNCHER")
     }
 }
 // Hauteur adaptée à l'écran (MacBook 13–14 pouces compris), la liste des correctifs défile si besoin.

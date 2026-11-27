@@ -12,6 +12,12 @@ xcrun clang -arch x86_64 -mmacosx-version-min=10.13 -dynamiclib -fobjc-arc -O2 \
     -framework Foundation -framework AppKit -framework CoreGraphics -framework QuartzCore \
     -framework Metal -framework AudioToolbox -framework CoreAudio
 codesign --force --sign - "$ROOT/assets/libts3fix.dylib"
+# bibliothèque injectée dans le launcher (x86_64 lui aussi)
+xcrun clang -arch x86_64 -mmacosx-version-min=10.13 -dynamiclib -fobjc-arc -O2 \
+    -Wno-unguarded-availability-new -Wno-deprecated-declarations -Wno-gnu-folding-constant \
+    -o "$ROOT/assets/libts3launcherfix.dylib" "$ROOT"/dylib-launcher/*.m \
+    -framework Foundation -framework AppKit
+codesign --force --sign - "$ROOT/assets/libts3launcherfix.dylib"
 for ARCH in arm64 x86_64; do
     xcrun swiftc -parse-as-library -O -target "$ARCH-apple-macos12.0" "$ROOT/app/main.swift" -o "$WORK/TS3MacFixes-$ARCH"
 done
