@@ -1,0 +1,11 @@
+{
+ "file": "Resources/GraphicsRules.sgr",
+ "base_sha1": "ce459837592d7a22bb417fdc2ee37864d53e3e91",
+ "result_sha1": "640be903810068d7aba2d0df5dc0b8b327712931",
+ "pairs": [
+  [
+   "\t    prop $ConfigGroup RenderForceMinspecShaders 0\n\t\tprop $ConfigGroup TerrainLODMode 0\n",
+   "\t    prop $ConfigGroup RenderForceMinspecShaders 0\n\t\tprop $ConfigGroup RenderPostProcessEnabled false\n\t\tprop $ConfigGroup TerrainLODMode 0\n"
+  ]
+ ]
+}

@@ -1,3 +1,8 @@
+## TS3 Mac Fixer 1.4.2
+
+- New: **Remove bloom (glow) effect**, off by default. Adds `RenderPostProcessEnabled false` to the *On* setting of `AdvancedRendering` in `GraphicsRules.sgr`. Lamps and headlights no longer glow, and the heat haze in Egypt disappears. **Revert all** removes the line.
+- The **Buggy launcher** fix is renamed **Launcher repair** (FR: « Réparation du lanceur »).
+
 ## TS3 Mac Fixer 1.4.1
 
 - New: **Buggy launcher** fix for The Sims 3 Launcher, which EA last built against macOS 10.14. It no longer crashes when you open Downloads, Uploads or Installed Content; **Install** and **Uninstall** install and remove `.Sims3Pack` files again; warnings are no longer shown as raw keys such as `Sims3Launcher/Strings/kWarn_VerifyEPDependenciesFail:Text` (23 strings EA never shipped on Mac are supplied in English and French); the **Show file** buttons reveal the file in the Finder; and the launcher no longer crashes on quit.

@@ -40,8 +40,9 @@ let FIXES: [Fix] = [
     Fix(id: "redflash", name: tr("Correction flash rose","Pink flash fix"), detail: "", kind: .shader, beta: true),
     Fix(id: "frostwindows", name: tr("Vitres givrées qui clignotent","Flickering frosted windows"), detail: tr("En hiver, les fenêtres des bâtiments communautaires ne clignotent plus.","In winter, community building windows no longer flicker."), kind: .shader),
     Fix(id: "gfxrules", name: tr("Optimisation des paramètres graphiques conseillés pour Apple Silicon","Recommended graphics settings for Apple Silicon"), detail: "", kind: .config),
+    Fix(id: "nobloom", name: tr("Supprimer l'effet bloom (halo lumineux)","Remove bloom (glow) effect"), detail: tr("Image moins voilée. Retire aussi le halo des lampes et des phares, et la brume de chaleur en Égypte.","Less washed-out image. Also removes the glow of lamps and headlights, and the heat haze in Egypt."), kind: .config),
     Fix(id: "perfini", name: tr("Réglages de performance conseillés pour Apple Silicon","Recommended performance settings for Apple Silicon"), detail: tr("Plus de temps de calcul pour les Sims, les chargements et les textures, mémoire de ressources ~4 Go.","More processing time for Sims, loading and textures; ~4 GB resource memory."), kind: .config),
-    Fix(id: "launcherfix", name: tr("Lanceur buggé","Buggy launcher"), detail: "", kind: .launcher),
+    Fix(id: "launcherfix", name: tr("Réparation du lanceur","Launcher repair"), detail: "", kind: .launcher),
 ]
 
 // MARK: - Moteur
@@ -592,7 +593,7 @@ final class Engine: ObservableObject {
     }
 
     // Fichiers de réglages du jeu (GraphicsRules.sgr, Sims3.ini) : remplacements de texte vérifiés, aller-retour exact.
-    let configPatches: [(id: String, json: String)] = [("gfxrules", "gfx_rules_patch.json"), ("perfini", "perf_ini_patch.json")]
+    let configPatches: [(id: String, json: String)] = [("gfxrules", "gfx_rules_patch.json"), ("perfini", "perf_ini_patch.json"), ("nobloom", "no_bloom_patch.json")]
     func configPatch(_ json: String) -> (file: String, pairs: [(String, String)])? {
         let p = (bundleRes as NSString).appendingPathComponent(json)
         guard let d = FileManager.default.contents(atPath: p),
